@@ -149,6 +149,7 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
   const refreshSelectedInfo = (el: HTMLElement | null) => {
     if (!el || !iframeRef.current?.contentWindow) {
       setSelectedInfo(null);
+      useCanvasStore.getState().setSelectedDomContext(null);
       return;
     }
     const win = iframeRef.current.contentWindow;
@@ -174,6 +175,16 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
     }
     const unionW = Math.max(1, maxRight - minLeft);
     const unionH = Math.max(1, maxBottom - minTop);
+
+    const tagName = el.tagName.toLowerCase();
+    const textSnippet = (el.innerText || el.textContent || '').trim().slice(0, 150);
+    const selectorHint = el.id ? `#${el.id}` : el.className && typeof el.className === 'string' ? `.${el.className.trim().split(/\s+/).slice(0, 2).join('.')}` : tagName;
+
+    useCanvasStore.getState().setSelectedDomContext({
+      tagName,
+      text: textSnippet,
+      selector: selectorHint,
+    });
 
     setSelectedInfo({
       tagName: el.tagName.toLowerCase(),

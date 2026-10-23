@@ -41,6 +41,8 @@ export default function AIChatPanel() {
     setIsLoading(true);
 
     try {
+      const selectedDomContext = useCanvasStore.getState().selectedDomContext;
+
       const context = {
         projectName: project?.name ?? 'Project',
         tokens: project?.tokens!,
@@ -51,6 +53,8 @@ export default function AIChatPanel() {
           data: project?.sectionData[n.data.sectionDataId]!,
         })),
         selectedNodeIds,
+        clonedPageHtml: project?.clonedPageHtml,
+        selectedElementContext: selectedDomContext || undefined,
       };
 
       const allMessages = [...messages, userMsg];
@@ -164,11 +168,20 @@ export default function AIChatPanel() {
 
       {/* Input */}
       <div className="p-3 border-t border-slate-700">
-        {selectedNodeIds.length > 0 && (
+        {useCanvasStore.getState().selectedDomContext ? (
+          <div className="flex items-center gap-1.5 text-xs text-indigo-400 mb-2 truncate">
+            <span className="font-semibold px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 font-mono text-[10px]">
+              &lt;{useCanvasStore.getState().selectedDomContext?.tagName}&gt;
+            </span>
+            <span className="truncate text-slate-300">
+              "{useCanvasStore.getState().selectedDomContext?.text.slice(0, 40)}"
+            </span>
+          </div>
+        ) : selectedNodeIds.length > 0 ? (
           <p className="text-xs text-indigo-400 mb-2">
             {selectedNodeIds.length} section{selectedNodeIds.length > 1 ? 's' : ''} selected
           </p>
-        )}
+        ) : null}
         <div className="flex gap-2">
           <textarea
             value={input}

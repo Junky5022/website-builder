@@ -15,6 +15,13 @@ interface CanvasStore {
   hoveredElementId: string | null;
   setHoveredElementId: (id: string | null) => void;
 
+  selectedDomContext: {
+    tagName: string;
+    text: string;
+    selector?: string;
+  } | null;
+  setSelectedDomContext: (ctx: CanvasStore['selectedDomContext']) => void;
+
   viewMode: 'canvas' | 'graph';
   setViewMode: (m: 'canvas' | 'graph') => void;
 
@@ -65,6 +72,9 @@ export const useCanvasStore = create<CanvasStore>()(
     }),
     hoveredElementId: null,
     setHoveredElementId: (id) => set((s) => { s.hoveredElementId = id; }),
+
+    selectedDomContext: null,
+    setSelectedDomContext: (ctx) => set((s) => { s.selectedDomContext = ctx; }),
 
     viewMode: 'canvas',
     setViewMode: (m) => set((s) => { s.viewMode = m; }),

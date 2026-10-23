@@ -217,33 +217,43 @@ NodeSectionType values and their EXACT required sectionData schemas:
 `.trim();
 
 export const CHAT_SYSTEM_PROMPT = `
-You are the AI design assistant for "Vibe Design Studio".
+You are an expert AI web designer and frontend engineer for "Vibe Design Studio".
+You can modify BOTH structured design sections AND live webpage DOM (HTML/CSS).
+
 When the user asks for design changes, you must return ONLY valid JSON in this format:
 {
-  "explanation": "<brief plain-language explanation of what you changed>",
+  "explanation": "<clear, concise summary of what you modified>",
   "changes": [
     {
-      "description": "<what this specific change does>",
+      "description": "<what this specific modification does>",
       "affectedNodeIds": ["<nodeId>", ...],
       "patch": {
-        "tokens": { <optional: partial DesignTokens to merge> },
+        "tokens": { <optional: partial DesignTokens to merge, e.g. primaryColor, font, radius> },
         "sectionData": { "<sectionDataId>": { <partial SectionData fields to merge> } },
         "nodeOrder": ["<nodeId in new order>", ...],
         "newNodes": [{ "type": "<NodeSectionType>", "label": "<name>", "sectionData": {<full SectionData>} }],
         "deleteNodeIds": ["<nodeId>", ...],
-        "renameNodes": { "<nodeId>": "<new label>" }
+        "renameNodes": { "<nodeId>": "<new label>" },
+        "domReplacements": [
+          {
+            "selector": "<CSS selector or element tag>",
+            "oldText": "<exact text to replace in the page>",
+            "newText": "<new text to insert>",
+            "newHtml": "<optional: replacement inner HTML>",
+            "styles": { "<CSS property in kebab-case>": "<CSS value>" }
+          }
+        ]
       }
     }
   ]
 }
 
 Rules:
-- Only include patch keys that have actual changes.
-- For color changes, use hex codes.
-- For font changes, use Google Font names or 'system-ui'.
-- If you don't know a section's nodeId, use "all" to affect all sections.
-- Keep changes minimal and targeted.
-- Always explain what you changed in plain language.
+1. If the project contains live cloned HTML or the user refers to text/elements on screen, ALWAYS supply targeted "domReplacements" to update text, colors, backgrounds, or styles in the live DOM.
+2. For styling, use standard CSS properties: "color", "background-color", "font-size", "padding", "border-radius", etc.
+3. If an element or section is selected in the context, focus your modifications on that selected target unless the user asks for a global change.
+4. Keep changes accurate, surgical, and minimal.
+5. Always explain what you changed in plain language.
 `.trim();
 
 // ─── Prompt builders ─────────────────────────────────────────────────────────
@@ -265,18 +275,37 @@ export function buildAnalysisPrompt(
 }
 
 export function buildChatPrompt(context: DesignContext): string {
-  return `
-CURRENT DESIGN CONTEXT:
+  let prompt = `CURRENT DESIGN CONTEXT:
 Project: ${context.projectName}
 
 Design Tokens:
 ${JSON.stringify(context.tokens, null, 2)}
+`;
 
-Page Sections (in order):
+  if (context.sections.length > 0) {
+    prompt += `\nPage Sections (in order):
 ${context.sections.map((s, i) => `${i + 1}. [${s.id}] ${s.label} (type: ${s.type})\n   nodeId: ${s.id}\n   sectionDataId: ${s.id}`).join('\n')}
+`;
+  }
 
-Selected sections: ${context.selectedNodeIds.length ? context.selectedNodeIds.join(', ') : 'none'}
+  if (context.selectedNodeIds.length > 0) {
+    prompt += `\nSelected Section IDs: ${context.selectedNodeIds.join(', ')}\n`;
+  }
 
-Respond with JSON as described in the system prompt.
-`.trim();
+  if (context.selectedElementContext) {
+    prompt += `\nCurrently Selected DOM Element:
+Tag: <${context.selectedElementContext.tagName}>
+Text Content: "${context.selectedElementContext.text}"
+Selector Hint: ${context.selectedElementContext.selector || 'none'}
+`;
+  }
+
+  if (context.clonedPageHtml) {
+    // Provide a concise snippet of the page HTML so the model knows the exact tags, texts, and classes
+    const truncatedHtml = context.clonedPageHtml.slice(0, 30000);
+    prompt += `\nLIVE PAGE HTML (first 30,000 chars):\n${truncatedHtml}\n`;
+  }
+
+  prompt += `\nRespond with JSON as described in the system prompt.`;
+  return prompt.trim();
 }

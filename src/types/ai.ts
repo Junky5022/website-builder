@@ -26,6 +26,15 @@ export interface AIChangePatch {
   }>;
   deleteNodeIds?: string[];
   renameNodes?: Record<string, string>;
+  // Live DOM modifications
+  domReplacements?: Array<{
+    selector?: string; // CSS selector or text hint
+    oldText?: string;  // exact text to find and replace
+    newText?: string;  // replacement text
+    newHtml?: string;  // replacement HTML
+    styles?: Record<string, string>; // CSS styles to apply (e.g. { "color": "#ff0000", "background-color": "#000" })
+  }>;
+  newClonedHtml?: string; // Full updated HTML if the AI rewrites sections
 }
 
 export interface PageAnalysis {
@@ -64,4 +73,10 @@ export interface DesignContext {
     data: import('./sections').SectionData;
   }>;
   selectedNodeIds: string[];
+  clonedPageHtml?: string;
+  selectedElementContext?: {
+    tagName: string;
+    text: string;
+    selector?: string;
+  };
 }

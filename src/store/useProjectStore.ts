@@ -420,6 +420,58 @@ export const useProjectStore = create<ProjectStore>()(
           });
         }
 
+        // Apply Live DOM replacements (for Cloned HTML pages)
+        if (s.project.clonedPageHtml && (patch.domReplacements?.length || patch.newClonedHtml)) {
+          if (patch.newClonedHtml) {
+            s.project.clonedPageHtml = patch.newClonedHtml;
+          } else if (patch.domReplacements) {
+            try {
+              const parser = new DOMParser();
+              const doc = parser.parseFromString(s.project.clonedPageHtml, 'text/html');
+
+              patch.domReplacements.forEach((rep) => {
+                // If there's an exact text replacement, scan and replace in text nodes or elements
+                if (rep.oldText && rep.newText !== undefined) {
+                  const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+                  let node: Node | null;
+                  while ((node = walker.nextNode())) {
+                    if (node.nodeValue && node.nodeValue.includes(rep.oldText)) {
+                      node.nodeValue = node.nodeValue.replace(rep.oldText, rep.newText);
+                    }
+                  }
+                }
+
+                // If there's a CSS selector, apply styles or HTML replacement
+                if (rep.selector) {
+                  try {
+                    const targets = doc.querySelectorAll(rep.selector);
+                    targets.forEach((el) => {
+                      if (el instanceof HTMLElement) {
+                        if (rep.styles) {
+                          Object.entries(rep.styles).forEach(([prop, val]) => {
+                            el.style.setProperty(prop, val);
+                          });
+                        }
+                        if (rep.newHtml) {
+                          el.innerHTML = rep.newHtml;
+                        } else if (rep.newText && !rep.oldText) {
+                          el.textContent = rep.newText;
+                        }
+                      }
+                    });
+                  } catch (e) {
+                    // Ignore invalid CSS selector from AI
+                  }
+                }
+              });
+
+              s.project.clonedPageHtml = '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+            } catch (err) {
+              console.error('Failed to apply domReplacements:', err);
+            }
+          }
+        }
+
         // Mark change as applied
         const ci = s.pendingChanges.findIndex((c) => c.id === changeId);
         if (ci !== -1) s.pendingChanges[ci].status = 'applied';

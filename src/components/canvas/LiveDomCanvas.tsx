@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import morphdom from 'morphdom';
 import {
   Copy,
   Trash2,
@@ -194,13 +195,55 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
     });
   };
 
-  // Only write to iframe.srcdoc when a genuinely new page or Undo/Redo state arrives
+  // Sync HTML into iframe:
+  // - If the iframe already has a loaded document, use in-place DOM morphing (morphdom) so
+  //   the page never flashes, blinks, or refreshes! Images, scroll, styles, and listeners stay alive.
+  // - If the iframe is blank/uninitialized or lacks a body, fall back to setting iframe.srcdoc.
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
     if (html === lastLoadedHtmlRef.current) return;
 
     lastLoadedHtmlRef.current = html;
+
+    const doc = iframe.contentDocument;
+    if (doc && doc.body && doc.body.children.length > 0) {
+      try {
+        const parser = new DOMParser();
+        const targetDoc = parser.parseFromString(html, 'text/html');
+
+        morphdom(doc.body, targetDoc.body, {
+          getNodeKey: (node: Node) => {
+            if (node instanceof HTMLElement) {
+              return node.id || undefined;
+            }
+            return undefined;
+          },
+          onBeforeElUpdated: (fromEl: HTMLElement, toEl: HTMLElement) => {
+            // Preserve the editor's injected interaction style element
+            if (fromEl.id === 'vds-editor-style') {
+              return false;
+            }
+            return true;
+          },
+        });
+
+        // Re-sync selection state and overlay positioning without any flicker
+        const activeSel = doc.querySelectorAll('[data-vds-selected="true"]') as NodeListOf<HTMLElement>;
+        const selList = Array.from(activeSel);
+        selectedElsRef.current = selList;
+        setSelectedEls(selList);
+        const primary = selList[0] || null;
+        selectedElRef.current = primary;
+        setSelectedEl(primary);
+        refreshSelectedInfo(primary);
+        return;
+      } catch (err) {
+        console.warn('DOM morphing fallback to srcdoc:', err);
+      }
+    }
+
+    // Initial load fallback:
     iframe.srcdoc = html;
   }, [html]);
 

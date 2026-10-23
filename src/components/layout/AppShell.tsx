@@ -7,6 +7,7 @@ import Topbar from './Topbar';
 import DesignCanvas from '../canvas/DesignCanvas';
 import InteractiveVisualCanvas from '../canvas/InteractiveVisualCanvas';
 import PreviewModal from '../preview/PreviewModal';
+import UpdateNotification from './UpdateNotification';
 
 interface Props { onBackToProjects: () => void; onManageApiKey?: () => void; }
 
@@ -38,6 +39,7 @@ export default function AppShell({ onBackToProjects, onManageApiKey }: Props) {
         <RightSidebar />
       </div>
       {isPreviewOpen && <PreviewModal />}
+      <UpdateNotification />
     </div>
   );
 }

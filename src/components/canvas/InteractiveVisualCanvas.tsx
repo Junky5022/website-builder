@@ -138,11 +138,22 @@ export default function InteractiveVisualCanvas() {
       <div
         ref={scrollContainerRef}
         className="w-full h-full overflow-hidden bg-slate-950 flex flex-col items-center py-4 px-4"
+        onClick={(e) => {
+          // If clicking outside the iframe container (on the slate backdrop), clear selection
+          if (e.target === e.currentTarget) {
+            useCanvasStore.getState().clearSelection();
+          }
+        }}
       >
         <div
           className="transition-all duration-300 w-full h-full flex flex-col items-center"
           style={{
             maxWidth: deviceWidthMap[deviceView],
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              useCanvasStore.getState().clearSelection();
+            }
           }}
         >
           <div className="w-full h-full rounded-2xl shadow-2xl overflow-hidden border border-slate-800 bg-white flex flex-col">

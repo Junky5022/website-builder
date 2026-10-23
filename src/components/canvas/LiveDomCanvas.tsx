@@ -1376,6 +1376,20 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
     commitDomChanges();
   };
 
+  const clearSelection = () => {
+    const doc = iframeRef.current?.contentDocument;
+    if (doc) {
+      doc.querySelectorAll('[data-vds-selected]').forEach((el) => el.removeAttribute('data-vds-selected'));
+    }
+    selectedElRef.current = null;
+    selectedElsRef.current = [];
+    setSelectedEl(null);
+    setSelectedEls([]);
+    setSelectedInfo(null);
+    setContextMenu(null);
+    useCanvasStore.getState().setSelectedDomContext(null);
+  };
+
   return (
     <div
       ref={containerRef}
@@ -1391,8 +1405,20 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
         <div
           ref={zoomScrollRef}
           className="w-full h-full overflow-auto"
+          onClick={(e) => {
+            // If clicking the empty canvas backdrop outside the webpage iframe, clear selection
+            if (e.target === e.currentTarget || (e.target as HTMLElement).getAttribute('data-vds-backdrop') === 'true') {
+              clearSelection();
+            }
+          }}
         >
           <div
+            data-vds-backdrop="true"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                clearSelection();
+              }
+            }}
             style={{
               width: `${Math.round(logicalWidth * effectiveScale)}px`,
               height: `${Math.round(logicalHeight * effectiveScale)}px`,

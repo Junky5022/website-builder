@@ -1,13 +1,41 @@
 {
   "name": "website-builder",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "Vibe Design Studio - Canva-style Visual Website Builder",
+  "author": "Junky5022",
+  "main": "electron/main.js",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "concurrently -k \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "electron:build": "npm run build && electron-builder --win"
+  },
+  "build": {
+    "appId": "com.vibedesignstudio.app",
+    "productName": "Vibe Design Studio",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "dependencies": {
     "@google/genai": "^2.30.0",
@@ -30,10 +58,14 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "autoprefixer": "^10.6.1",
+    "concurrently": "^10.0.6",
+    "electron": "^45.0.0",
+    "electron-builder": "^26.15.3",
     "oxlint": "^1.88.0",
     "playwright": "^1.64.1",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
-    "vite": "^8.3.4"
+    "vite": "^8.3.4",
+    "wait-on": "^9.5.1"
   }
 }

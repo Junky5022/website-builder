@@ -30,6 +30,7 @@ interface Snapshot {
   nodes: DesignNode[];
   edges: DesignEdge[];
   sectionData: SectionDataMap;
+  clonedPageHtml?: string;
 }
 
 interface ProjectStore {
@@ -441,6 +442,7 @@ export const useProjectStore = create<ProjectStore>()(
         nodes: JSON.parse(JSON.stringify(project.nodes)),
         edges: JSON.parse(JSON.stringify(project.edges)),
         sectionData: JSON.parse(JSON.stringify(project.sectionData)),
+        clonedPageHtml: project.clonedPageHtml,
       };
       set((s) => {
         s.past.push(snap as any);
@@ -458,6 +460,7 @@ export const useProjectStore = create<ProjectStore>()(
         nodes: JSON.parse(JSON.stringify(project.nodes)),
         edges: JSON.parse(JSON.stringify(project.edges)),
         sectionData: JSON.parse(JSON.stringify(project.sectionData)),
+        clonedPageHtml: project.clonedPageHtml,
       };
       set((s) => {
         s.future.push(current as any);
@@ -467,6 +470,7 @@ export const useProjectStore = create<ProjectStore>()(
           s.project.nodes = snap.nodes as any;
           s.project.edges = snap.edges as any;
           s.project.sectionData = snap.sectionData as any;
+          s.project.clonedPageHtml = snap.clonedPageHtml;
         }
       });
       scheduleAutosave(get);
@@ -481,6 +485,7 @@ export const useProjectStore = create<ProjectStore>()(
         nodes: JSON.parse(JSON.stringify(project.nodes)),
         edges: JSON.parse(JSON.stringify(project.edges)),
         sectionData: JSON.parse(JSON.stringify(project.sectionData)),
+        clonedPageHtml: project.clonedPageHtml,
       };
       set((s) => {
         s.past.push(current as any);
@@ -490,6 +495,7 @@ export const useProjectStore = create<ProjectStore>()(
           s.project.nodes = snap.nodes as any;
           s.project.edges = snap.edges as any;
           s.project.sectionData = snap.sectionData as any;
+          s.project.clonedPageHtml = snap.clonedPageHtml;
         }
       });
       scheduleAutosave(get);

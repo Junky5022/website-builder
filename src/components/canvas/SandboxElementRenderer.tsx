@@ -236,6 +236,7 @@ export default function SandboxElementRenderer({
 
       if (!hasMoved) {
         hasMoved = true;
+        pushHistory();
         setIsDragging(true);
       }
 
@@ -374,7 +375,6 @@ export default function SandboxElementRenderer({
         setIsDragging(false);
         setLiveOffset(null);
         setSnapGuideLines({});
-        pushHistory();
 
         const deltaMovedX = latestFinalX - initialX;
         const deltaMovedY = latestFinalY - initialY;
@@ -488,7 +488,13 @@ export default function SandboxElementRenderer({
     const startWidth = parent?.offsetWidth || 300;
     const startHeight = parent?.offsetHeight || 200;
 
+    let hasPushedResizeHistory = false;
+
     const onMouseMove = (moveEvent: MouseEvent) => {
+      if (!hasPushedResizeHistory) {
+        hasPushedResizeHistory = true;
+        pushHistory();
+      }
       const deltaX = moveEvent.clientX - startX;
       const deltaY = moveEvent.clientY - startY;
       const newWidth = Math.max(60, Math.round(startWidth + deltaX));
@@ -505,7 +511,6 @@ export default function SandboxElementRenderer({
       const finalWidth = Math.max(60, Math.round(startWidth + deltaX));
       const finalHeight = Math.max(32, Math.round(startHeight + deltaY));
       setLiveDimensions(null);
-      pushHistory();
 
       updateElement(sectionId, element.id, {
         style: {

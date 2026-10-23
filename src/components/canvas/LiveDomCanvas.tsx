@@ -621,6 +621,7 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
           refreshSelectedInfo(el);
           commitDomChanges();
         };
+        useProjectStore.getState().pushHistory();
         el.addEventListener('blur', onBlur);
       };
 
@@ -790,7 +791,10 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
           const dx = moveEv.clientX - startClientX;
           const dy = moveEv.clientY - startClientY;
           if (!moved && Math.hypot(dx, dy) < 3) return;
-          moved = true;
+          if (!moved) {
+            moved = true;
+            useProjectStore.getState().pushHistory();
+          }
 
           const isFreeform = moveEv.altKey;
           let finalDx = dx;
@@ -913,7 +917,6 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
           setLiveDragCoords(null);
           setSnapGuides([]);
           if (moved) {
-            useProjectStore.getState().pushHistory();
             commitDomChanges();
           }
         };
@@ -925,6 +928,23 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
       const onKeyDown = (e: KeyboardEvent) => {
         const current = selectedElRef.current;
         if (current?.isContentEditable) return;
+
+        // Undo (Ctrl+Z) / Redo (Ctrl+Y or Ctrl+Shift+Z) inside the iframe
+        if (e.ctrlKey || e.metaKey) {
+          if (e.key.toLowerCase() === 'z') {
+            e.preventDefault();
+            if (e.shiftKey) {
+              useProjectStore.getState().redo();
+            } else {
+              useProjectStore.getState().undo();
+            }
+            return;
+          } else if (e.key.toLowerCase() === 'y') {
+            e.preventDefault();
+            useProjectStore.getState().redo();
+            return;
+          }
+        }
 
         // Ctrl + Plus / Minus / 0 to Zoom In / Out / Reset
         if (e.ctrlKey || e.metaKey) {
@@ -1058,6 +1078,7 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
       refreshSelectedInfo(selectedEl);
       commitDomChanges();
     };
+    useProjectStore.getState().pushHistory();
     selectedEl.addEventListener('blur', onBlur);
   };
 
@@ -1073,7 +1094,13 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
     const startW = rect.width;
     const startH = rect.height;
 
+    let hasPushedResizeHistory = false;
+
     const onMouseMove = (moveEv: MouseEvent) => {
+      if (!hasPushedResizeHistory) {
+        hasPushedResizeHistory = true;
+        useProjectStore.getState().pushHistory();
+      }
       const curScale = useCanvasStore.getState().zoomLevel / 100;
       const nextW = Math.max(24, Math.round(startW + (moveEv.clientX - startX) / curScale));
       const nextH = Math.max(20, Math.round(startH + (moveEv.clientY - startY) / curScale));
@@ -1087,8 +1114,9 @@ export default function LiveDomCanvas({ html, readOnly = false }: Props) {
       window.removeEventListener('mousemove', onMouseMove);
       window.removeEventListener('mouseup', onMouseUp);
       setLiveResizeDims(null);
-      useProjectStore.getState().pushHistory();
-      commitDomChanges();
+      if (hasPushedResizeHistory) {
+        commitDomChanges();
+      }
     };
 
     window.addEventListener('mousemove', onMouseMove);

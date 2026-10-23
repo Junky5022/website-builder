@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Download, Code, FileJson, Image, FileText, FileCode2, Loader2 } from 'lucide-react';
+import { Download, Code, FileJson, Image, FileText, FileCode2, Loader2, FolderArchive, CheckCircle2 } from 'lucide-react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { generatePreviewHtml } from '../../services/export/htmlExporter';
+import { exportProjectToZip, type ExportZipProgress } from '../../services/export/zipExporter';
 import JSZip from 'jszip';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -9,6 +10,7 @@ import { jsPDF } from 'jspdf';
 export default function ExportPanel() {
   const project = useProjectStore((s) => s.project);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [zipProgress, setZipProgress] = useState<ExportZipProgress | null>(null);
 
   if (!project) {
     return <div className="p-4 text-xs text-slate-500">No project loaded.</div>;
@@ -23,6 +25,24 @@ export default function ExportPanel() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleExportFullZip = async () => {
+    setDownloading('zip');
+    try {
+      const zipBlob = await exportProjectToZip(project, (progress) => {
+        setZipProgress(progress);
+      });
+      triggerDownload(zipBlob, `${project.name.toLowerCase().replace(/\s+/g, '-')}-website.zip`);
+    } catch (err) {
+      console.error('ZIP Export Error:', err);
+      alert('Failed to package zip. Please check console for details.');
+    } finally {
+      setTimeout(() => {
+        setDownloading(null);
+        setZipProgress(null);
+      }, 500);
+    }
   };
 
   const handleExportHtml = () => {
@@ -146,6 +166,54 @@ export default function App() {
       </div>
 
       <div className="space-y-2">
+        {/* Full Production Website ZIP Bundle (Recommended) */}
+        <button
+          onClick={handleExportFullZip}
+          disabled={!!downloading}
+          className="w-full flex flex-col p-3.5 rounded-xl border-2 border-indigo-500 bg-indigo-600/15 hover:bg-indigo-600/25 transition text-left group shadow-lg"
+        >
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-indigo-600 text-white rounded-lg shadow">
+                <FolderArchive className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold text-white">Full Website Bundle (.ZIP)</p>
+                  <span className="text-[10px] font-semibold bg-indigo-500 text-white px-2 py-0.5 rounded-full">Recommended</span>
+                </div>
+                <p className="text-xs text-indigo-200 mt-0.5">
+                  Includes HTML, CSS, JS + all photos in a dedicated <code className="bg-slate-900 px-1 py-0.5 rounded text-amber-300">photos/</code> folder
+                </p>
+              </div>
+            </div>
+            {downloading === 'zip' ? (
+              <Loader2 className="w-5 h-5 animate-spin text-indigo-400" />
+            ) : (
+              <Download className="w-5 h-5 text-indigo-400 group-hover:text-white transition" />
+            )}
+          </div>
+
+          {zipProgress && (
+            <div className="w-full mt-3 pt-2.5 border-t border-indigo-500/30">
+              <div className="flex justify-between text-[11px] text-indigo-200 mb-1">
+                <span>{zipProgress.status}</span>
+                <span>{zipProgress.percent}%</span>
+              </div>
+              <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                <div
+                  className="bg-indigo-500 h-1.5 rounded-full transition-all duration-200"
+                  style={{ width: `${zipProgress.percent}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </button>
+
+        <div className="pt-2">
+          <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wider mb-2">Other Formats</p>
+        </div>
+
         <button
           onClick={handleExportHtml}
           disabled={!!downloading}

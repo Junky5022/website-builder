@@ -204,7 +204,6 @@ export default function ApiKeySetup({ onKeySet, onCancel }: Props) {
         'email',
         'profile',
         'https://www.googleapis.com/auth/cloud-platform',
-        'https://www.googleapis.com/auth/generative-language.retriever',
       ].join(' ');
 
       const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');

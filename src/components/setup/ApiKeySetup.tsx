@@ -203,6 +203,7 @@ export default function ApiKeySetup({ onKeySet, onCancel }: Props) {
         'openid',
         'email',
         'profile',
+        'https://www.googleapis.com/auth/generative-language',
         'https://www.googleapis.com/auth/cloud-platform',
       ].join(' ');
 

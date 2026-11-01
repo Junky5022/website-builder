@@ -278,6 +278,7 @@ ipcMain.handle('start-google-oauth', async (_event, { clientId, clientSecret, pr
         'openid',
         'email',
         'profile',
+        'https://www.googleapis.com/auth/generative-language',
         'https://www.googleapis.com/auth/cloud-platform',
       ].join(' ');
 

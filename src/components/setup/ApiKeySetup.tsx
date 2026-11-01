@@ -659,7 +659,7 @@ export default function ApiKeySetup({ onKeySet, onCancel }: Props) {
                     type="button"
                     onClick={() =>
                       copyCommand(
-                        'gcloud auth application-default login --scopes="openid,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/generative-language.retriever"'
+                        'gcloud auth application-default login'
                       )
                     }
                     className="flex items-center gap-1 text-[11px] text-indigo-400 hover:text-indigo-300"

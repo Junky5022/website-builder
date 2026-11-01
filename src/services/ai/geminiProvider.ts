@@ -1,6 +1,6 @@
 import { GoogleGenAI } from '@google/genai';
 import type { AIProvider, ChatMessage, PageAnalysis, DesignContext, AIChange } from '../../types/ai';
-import { generateId, getCachedModel, setCachedModel } from '../../utils/storage';
+import { generateId, getCachedModel, setCachedModel, getOAuthConfig, setOAuthConfig, type GeminiOAuthConfig } from '../../utils/storage';
 import { ANALYSIS_SYSTEM_PROMPT, CHAT_SYSTEM_PROMPT, buildAnalysisPrompt, buildChatPrompt } from './prompts';
 
 // Only include current active v1beta models (gemini-1.5-* are retired on v1beta)
@@ -34,12 +34,115 @@ function isTransientError(err: any): boolean {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+export async function refreshOAuthTokenIfNeeded(config: GeminiOAuthConfig): Promise<GeminiOAuthConfig> {
+  const now = Date.now();
+  // If expiresAt is set and within 60 seconds of expiring, attempt refresh
+  if (config.expiresAt && now < config.expiresAt - 60_000) {
+    return config;
+  }
+
+  // 1. If authenticated via local gcloud ADC in Electron, ask Electron main process for fresh token
+  const win = window as any;
+  if (config.source === 'adc' && win.electronAPI?.getGcloudToken) {
+    try {
+      const adcRes = await win.electronAPI.getGcloudToken();
+      if (adcRes?.accessToken) {
+        const updated: GeminiOAuthConfig = {
+          ...config,
+          accessToken: adcRes.accessToken,
+          projectId: adcRes.projectId || config.projectId,
+          expiresAt: Date.now() + 50 * 60 * 1000,
+        };
+        setOAuthConfig(updated);
+        return updated;
+      }
+    } catch (e) {
+      console.warn('ADC token refresh failed:', e);
+    }
+  }
+
+  // 2. Standard OAuth refresh token flow
+  if (config.refreshToken && config.clientId) {
+    try {
+      const body = new URLSearchParams({
+        client_id: config.clientId,
+        grant_type: 'refresh_token',
+        refresh_token: config.refreshToken,
+      });
+      if (config.clientSecret) {
+        body.set('client_secret', config.clientSecret);
+      }
+      const res = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.access_token) {
+          const updated: GeminiOAuthConfig = {
+            ...config,
+            accessToken: data.access_token,
+            expiresAt: Date.now() + (data.expires_in || 3600) * 1000,
+          };
+          setOAuthConfig(updated);
+          return updated;
+        }
+      }
+    } catch (e) {
+      console.warn('OAuth token refresh failed:', e);
+    }
+  }
+
+  return config;
+}
+
+export function createOAuthFetch(initialConfig: GeminiOAuthConfig): typeof fetch {
+  return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const latest = await refreshOAuthTokenIfNeeded(getOAuthConfig() || initialConfig);
+    const headers = new Headers(init?.headers);
+
+    // Remove the placeholder x-goog-api-key header injected by the browser SDK
+    headers.delete('x-goog-api-key');
+    headers.set('Authorization', `Bearer ${latest.accessToken}`);
+    if (latest.projectId) {
+      headers.set('x-goog-user-project', latest.projectId);
+    }
+
+    // Also strip any ?key=... query param if present
+    let urlStr = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    if (urlStr.includes('key=')) {
+      try {
+        const u = new URL(urlStr);
+        u.searchParams.delete('key');
+        urlStr = u.toString();
+      } catch {
+        // ignore URL parse error
+      }
+    }
+
+    return fetch(urlStr, {
+      ...init,
+      headers,
+    });
+  };
+}
+
 export class GeminiProvider implements AIProvider {
   private ai: GoogleGenAI;
   private model: string;
 
-  constructor(apiKey: string) {
-    this.ai = new GoogleGenAI({ apiKey });
+  constructor(auth: string | GeminiOAuthConfig) {
+    if (typeof auth === 'string') {
+      this.ai = new GoogleGenAI({ apiKey: auth });
+    } else {
+      this.ai = new GoogleGenAI({
+        apiKey: 'OAUTH_BEARER_MODE',
+        httpOptions: {
+          fetch: createOAuthFetch(auth),
+        },
+      });
+    }
     const cached = getCachedModel();
     // Ignore stale retired 1.5 models if previously cached
     this.model = cached && !cached.includes('1.5') ? cached : 'gemini-2.5-flash';

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { PlusCircle, FolderOpen, Trash2, Key, Clock } from 'lucide-react';
-import { listProjectMetas, deleteProject } from '../../utils/storage';
+import { PlusCircle, FolderOpen, Trash2, ShieldCheck, Clock } from 'lucide-react';
+import { listProjectMetas, deleteProject, getOAuthConfig } from '../../utils/storage';
 
 interface Props {
   onSelect: (id: string) => void;
@@ -12,6 +12,7 @@ export default function ProjectPicker({ onSelect, onCreate, onChangeKey }: Props
   const [projects, setProjects] = useState(() => listProjectMetas());
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
+  const oauth = getOAuthConfig();
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,8 +41,13 @@ export default function ProjectPicker({ onSelect, onCreate, onChangeKey }: Props
             </div>
             <p className="text-slate-400 mt-1 ml-9">Your design projects</p>
           </div>
-          <button onClick={onChangeKey} className="flex items-center gap-2 text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-500 rounded-xl px-3 py-2 transition">
-            <Key className="w-4 h-4" /> API Key
+          <button onClick={onChangeKey} className="flex items-center gap-2 text-sm text-slate-300 hover:text-white border border-slate-700 hover:border-indigo-500 bg-slate-800/70 rounded-xl px-3.5 py-2 transition">
+            {oauth?.picture ? (
+              <img src={oauth.picture} alt="" className="w-4 h-4 rounded-full" />
+            ) : (
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            )}
+            <span>{oauth?.email || oauth?.name || 'Google Account'}</span>
           </button>
         </div>
 

@@ -7,8 +7,22 @@ import type { ChatMessage } from '../types/ai';
 const PROJECTS_INDEX_KEY = 'vds:projects';
 const PROJECT_KEY_PREFIX = 'vds:project:';
 const API_KEY_STORAGE = 'vds:gemini-api-key';
+const OAUTH_CONFIG_STORAGE = 'vds:gemini-oauth-config';
 const ACTIVE_PROJECT_KEY = 'vds:active-project';
 const WORKING_MODEL_KEY = 'vds:gemini-working-model';
+
+export interface GeminiOAuthConfig {
+  accessToken: string;
+  refreshToken?: string;
+  expiresAt?: number;
+  clientId?: string;
+  clientSecret?: string;
+  projectId?: string;
+  email?: string;
+  name?: string;
+  picture?: string;
+  source?: 'google-oauth' | 'adc';
+}
 
 export function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -22,6 +36,30 @@ export function setApiKey(key: string): void {
 }
 export function clearApiKey(): void {
   localStorage.removeItem(API_KEY_STORAGE);
+}
+
+export function getOAuthConfig(): GeminiOAuthConfig | null {
+  const raw = localStorage.getItem(OAUTH_CONFIG_STORAGE);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as GeminiOAuthConfig;
+  } catch {
+    return null;
+  }
+}
+
+export function setOAuthConfig(config: GeminiOAuthConfig): void {
+  localStorage.setItem(OAUTH_CONFIG_STORAGE, JSON.stringify(config));
+}
+
+export function clearOAuthConfig(): void {
+  localStorage.removeItem(OAUTH_CONFIG_STORAGE);
+}
+
+export function hasAuthCredentials(): boolean {
+  const oauth = getOAuthConfig();
+  if (oauth && oauth.accessToken) return true;
+  return Boolean(getApiKey());
 }
 
 export function getCachedModel(): string | null {

@@ -5,7 +5,7 @@ import {
   Redo2,
   Eye,
   Download,
-  Key,
+  ShieldCheck,
   Monitor,
   Tablet,
   Smartphone,
@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useProjectStore } from '../../store/useProjectStore';
 import { useCanvasStore } from '../../store/useCanvasStore';
+import { getOAuthConfig } from '../../utils/storage';
 
 interface Props { onBackToProjects: () => void; onManageApiKey?: () => void; }
 
@@ -176,10 +177,17 @@ export default function Topbar({ onBackToProjects, onManageApiKey }: Props) {
         {onManageApiKey && (
           <button
             onClick={onManageApiKey}
-            className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition ml-1"
-            title="Update Gemini API Key"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 border border-slate-700/80 transition ml-1 text-xs"
+            title="Manage Google OAuth / Gemini Account"
           >
-            <Key className="w-4 h-4" />
+            {getOAuthConfig()?.picture ? (
+              <img src={getOAuthConfig()!.picture} alt="" className="w-4 h-4 rounded-full" />
+            ) : (
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            )}
+            <span className="hidden lg:inline max-w-28 truncate">
+              {getOAuthConfig()?.email || getOAuthConfig()?.name || 'Google Auth'}
+            </span>
           </button>
         )}
       </div>

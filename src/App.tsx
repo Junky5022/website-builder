@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getApiKey, getActiveProjectId, loadProject, createBlankProject, saveProject } from './utils/storage';
+import { hasAuthCredentials, getActiveProjectId, loadProject, createBlankProject, saveProject } from './utils/storage';
 import { useProjectStore } from './store/useProjectStore';
 import ApiKeySetup from './components/setup/ApiKeySetup';
 import ProjectPicker from './components/setup/ProjectPicker';
@@ -12,8 +12,7 @@ export default function App() {
   const setProject = useProjectStore((s) => s.setProject);
 
   useEffect(() => {
-    const key = getApiKey();
-    if (!key) { setView('api-key'); return; }
+    if (!hasAuthCredentials()) { setView('api-key'); return; }
 
     const activeId = getActiveProjectId();
     if (activeId) {

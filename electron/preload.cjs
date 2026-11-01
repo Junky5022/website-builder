@@ -24,5 +24,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('update-not-available', handler);
     return () => ipcRenderer.removeListener('update-not-available', handler);
   },
+  getGcloudToken: () => ipcRenderer.invoke('get-gcloud-token'),
+  startGoogleOAuth: (params) => ipcRenderer.invoke('start-google-oauth', params),
   isElectron: true,
 });
